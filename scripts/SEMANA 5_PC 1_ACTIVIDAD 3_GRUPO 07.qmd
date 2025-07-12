@@ -1,0 +1,343 @@
+---
+title: "Covid_19_diabeteS"
+author: "Grupo_07"
+format: html
+editor: visual
+---
+
+## Practica Clificada 03
+
+## Integrantes:
+
+-   Bernachea Hilario Pilar
+
+-   Infante Rojas Thiago Aldhair Peter
+
+-   Quiroz Robles Sebastian Joaquin
+
+-   Rivera Allcca Susan Angelica
+
+-   Rojas Quispe Eloisa Milagro
+
+# Paquetes para resumir datos
+
+Instalar paquetes
+
+```{r}
+#install.packages("gtsummary")
+#install.packages("finalfit")
+#install.packages("flextable")
+#install.packages("shape")
+#install.packages("jomo")
+#install.packages("pan")
+#install.packages("dplyr")
+```
+
+Cargar paquetes
+
+```{r}
+library(tidyverse)
+library(here)
+library(rio)
+library(gtsummary) 
+library(finalfit)
+library(flextable)
+library(dplyr)
+```
+
+# Cargando los datos
+
+## Running Code
+
+```{r}
+Covid_19_diabetes <- read_csv("C:/Users/USER/Desktop/PRACTICA_CALIFICADA01/PRACTICA_CALIFICADA01/Data/covid_19_diabetes.csv", na = c("", "NA", "N/A"))
+```
+
+### La "estructura" de los datos
+
+```{r}
+str(Covid19_diabetes)
+```
+
+# 1. Resumen de variables categóricas
+
+En este paso ejecutamos la función `table()` para la variable `saturacion-02_media` y `Glucosa`.
+
+```{r}
+table(Covid_19_diabetes$Saturación_O2_medida , useNA = "ifany")
+```
+
+```{r}
+table(Covid_19_diabetes$Glucosa , useNA = "ifany")
+```
+
+Con tiddyverse
+
+```{r}
+Covid_19_diabetes |> 
+  dplyr::count(Saturación_O2_medida, sort = TRUE)
+```
+
+Valores perdidos en proporciones
+
+```{r}
+prop.table(table(Covid_19_diabetes$Saturación_O2_medida , useNA = "ifany"))
+```
+
+# 2. Resumen de variables continuas
+
+```{r}
+mean(Covid_19_diabetes$Saturación_O2, na.rm = TRUE)
+```
+
+```{r}
+sd(Covid_19_diabetes$Saturación_O2, na.rm = TRUE)
+```
+
+Se aplico las siguientes funciones `min()`, `max()`, `median()` y `IQR()`
+
+```{r}
+min(Covid_19_diabetes$Saturación_O2, na.rm = TRUE) # Proporciona el valor mínimo
+
+IQR(Covid_19_diabetes$Saturación_O2, na.rm = TRUE) # Calcula el rango intercuartilico
+
+median(Covid_19_diabetes$Saturación_O2, na.rm = TRUE) # Calcula la mediana
+```
+
+### La función `summary()` para calcular todas las medidas, a la vez.
+
+Se calculara las medidas estadísticas con la variable Glucosa
+
+```{r}
+summary(Covid_19_diabetes$Glucosa)
+```
+
+## ¿Mediana o media?
+
+Se ejecutara la media y mediana de la variable `Temperatura`
+
+```{r}
+mean(Covid_19_diabetes$Temperatura , na.rm = T)
+```
+
+```{r}
+median(Covid_19_diabetes$Temperatura , na.rm = T)
+```
+
+La media y mediana de la variable `Temperatura` son similares. Estos sugiere que los datos tienen una distribución simétrica.
+
+Debajo otro ejemplo con la variable `Ferritina`
+
+```{r}
+mean(Covid_19_diabetes$Ferritina , na.rm = T)
+```
+
+```{r}
+median(Covid_19_diabetes$Ferritina , na.rm = T)
+```
+
+La media y mediana de la variable `Ferritina` son diferentes. Estos sugiere que los datos tienen una distribución asimétrica.
+
+Comprobémoslo visualmente
+
+```{r}
+par(mfrow=c(1,2)) # Configuramos e número de elementos por Figura
+hist(Covid_19_diabetes$Temperatura)
+hist(Covid_19_diabetes$Ferritina)
+```
+
+# \[resumen\] Por otra variable
+
+Aqui realizamos el resumen de datos por otra variable
+
+```{r}
+Covid_19_diabetes |> 
+  group_by(edad) |> 
+  summarise(n_observ = n(),
+            porcentaje = (n_observ / nrow(Covid_19_diabetes)*100))
+```
+
+```{r}
+Covid_19_diabetes |>  
+  group_by(demencia) |> 
+  summarize(promedio = mean(Glucosa, na.rm = T))
+```
+
+Podemos hacer resumenes incluso más complejos. Por ejemplo, calcular la media de glucosa por estado de `demencia` y categoría de `edad`
+
+```{r}
+Covid_19_diabetes |>  
+  group_by(demencia, edad) |> 
+  summarize(promedio = mean(Glucosa, na.rm = T))
+```
+
+Otros estadísticos
+
+```{r}
+Covid_19_diabetes |>  
+  group_by(demencia, edad) |> 
+  summarize(promedio_glucosa = mean(Glucosa, na.rm = TRUE),
+            DE = sd(Glucosa, na.rm = TRUE),
+            max_valor_glucosa = max(Glucosa, na.rm = TRUE))
+```
+
+Estadística descriptiva condicional: resumen por grupo de estado de demencia
+
+```{r}
+Covid_19_diabetes |>  
+  group_by(edad) |> 
+  summarize(max_Saturación_O2_diab = max(Saturación_O2[demencia == "Si"], na.rm = TRUE),
+            max_Saturación_O2_no_diab = max(Saturación_O2[demencia == "No"], na.rm = TRUE),
+            prom_Saturación_O2_diab = mean(Saturación_O2[demencia == "Si"], na.rm = TRUE),
+            prom_Saturación_O2_no_diab = mean(Saturación_O2[demencia == "No"], na.rm = TRUE))
+  
+```
+
+Percentiles del nivel de glucosa por edad solo en participantes con demencias usando la función `filter()`
+
+```{r}
+Covid_19_diabetes |> 
+  filter(demencia  == "Sí") |> 
+  group_by(edad) |> 
+  summarize(p25 = quantile(Glucosa , probs = 0.25, na.rm=T),
+            p50 = quantile(Glucosa , probs = 0.50, na.rm=T),
+            p75 = quantile(Glucosa , probs = 0.75, na.rm=T))
+```
+
+Usando `across()` para multiples estadísticos descriptivos para multiples variables
+
+```{r}
+Covid_19_diabetes |> 
+  group_by(demencia) |> 
+  summarize(across(.cols = c(Glucosa, Saturación_O2, 
+                             Ferritina, edad, Temperatura),
+                   .fns = list("promedio" = mean, "DE" = sd, 
+                               "máximo" = max),
+                   na.rm = TRUE))
+```
+
+```{r}
+Covid_19_diabetes |> 
+  group_by(demencia) |> 
+  summarize(across(.cols = where(is.numeric),
+                   .fns = list("promedio" = mean, "DE" = sd, 
+                               "máximo" = max),
+                   na.rm = TRUE))
+```
+
+# La "Tabla 1" con gtsummary
+
+```{r}
+#install.packages("finalfit")
+#install.packages("gtsummary")
+```
+
+```{r}
+library(gtsummary)
+```
+
+Tabla 1 básico
+
+```{r}
+Covid_19_diabetes |> 
+  select(Edad, severidad, , Saturación_O2, Glucosa, 
+         Puntuación_edad  , Temperatura, demencia) |> 
+  tbl_summary()
+```
+
+```{r}
+Covid_19_diabetes |> 
+  select(Edad, severidad, , Saturación_O2, Glucosa, 
+         Puntuación_edad  , Temperatura, demencia) |> 
+  tbl_summary(
+    by = demencia
+  )
+```
+
+## Configurando el estilo e idioma
+
+```{r}
+theme_gtsummary_language(language = "es") # idioma es = español
+theme_gtsummary_journal(journal = "jama")
+```
+
+```{r}
+Covid_19_diabetes |> 
+  select(Edad, severidad, , Saturación_O2, Glucosa, 
+         Puntuación_edad  , Temperatura, demencia) |> 
+  tbl_summary(
+    by = demencia
+  )
+```
+
+## Recodificación de variables y adición de nombres correctos a variables
+
+```{r}
+Covid_19_diabetes_0 = Covid_19_diabetes |>
+  mutate(
+    Edad = ff_label(Edad, "Edad (años)"),
+    
+     edad = case_when(
+      Edad <= 25 ~ "≤25",
+      Edad >= 26 & Edad <= 35 ~ "26-35",
+      Edad >= 36 & Edad <= 50 ~ "36-50",
+      Edad > 50 ~ ">50"
+    )  |>
+      fct_relevel("≤25", "26-35", "36-50", ">50") |> 
+      ff_label("Grupo etario"),
+    
+    INR = ff_label(INR, "Ratio Internacional Normalizado"),
+    
+    Saturación_O2 = ff_label(Saturación_O2,"Saturación de oxígeno"),
+    
+    demencia = as.factor(demencia) |>
+      fct_recode("Sí" = "Sí",
+                 "No" = "No") |>
+      fct_relevel("Sí", "No") |> 
+      ff_label("Covid 19 y Dibetes Mellitus"),
+    Temperatura = as.numeric(as.character(Temperatura)),  
+    Temperatura = case_when(
+      Temperatura < 36 ~ "Baja (<36)",
+      Temperatura >= 36.5 & Temperatura <= 37.5 ~ "Normal (36.5-37.5)",
+      Temperatura > 38 ~ "Alta (>38)",
+      TRUE ~ NA_character_
+    ) |> 
+      factor(levels = c("Baja (<36)", "Normal (36.5-37.5)", "Alta (>38)")) |> 
+      ff_label("niveles de temperatura corporal (°c)"),
+    
+    Glucosa = ff_label(Glucosa, "Glucosa (mg/dL)")
+    )
+```
+
+```{r}
+tabla_1.v1 = Covid_19_diabetes_0 |> 
+  select(Edad, INR, Saturación_O2, demencia , Temperatura , Glucosa) |> 
+  tbl_summary(by = demencia) 
+```
+
+```{r}
+tabla_1.v2 = Covid_19_diabetes_0 |> 
+  select(Edad, INR, Saturación_O2, demencia , Temperatura , Glucosa) |> 
+  tbl_summary(by = demencia) |> 
+  modify_spanning_header(all_stat_cols() ~ "**Covid 19 y Dibetes Mellitus**") |>
+  add_overall()
+```
+
+```{r}
+tabla_1 = Covid_19_diabetes_0 |> 
+  select(Edad, INR, Saturación_O2, demencia , Temperatura , Glucosa) |> 
+  tbl_summary(by = demencia) |> 
+  modify_spanning_header(all_stat_cols() ~ "**Covid 19 y Dibetes Mellitus**") |>
+  add_overall() |> 
+  modify_caption("**Tabla 1**. Características de los pacientes del departamento de medicina interna del Hospital Santa Maria del Socorro Ica")
+```
+
+```{r}
+install.packages("flextable")
+library(flextable)
+```
+
+```{r}
+tabla_1_flex = as_flex_table(tabla_1) # Convertir a flex table
+save_as_docx(tabla_1_flex, path = "tabla_1_flex.docx") # Guardar tabla
+```

@@ -1,0 +1,145 @@
+---
+title: "Análisis de Indicadores Médicos y Activación de Paquetes en RStudio"
+author: "Grupo 07 - INTEGRANTES"
+format: html
+editor: visual
+---
+
+# Grupo 07 - INTEGRANTES
+
+-   PILAR DEL CARMEN BERNACHEA HILARIO
+-   SUSAN ANGELICA RIVERA ALLCCA
+-   SEBASTIAN JOAQUIN QUIROZ ROBLES
+-   THIAGO ALDHAIR PETER INFANTE ROJAS
+-   ELOISA MILAGRO ROJAS QUISPE
+
+------------------------------------------------------------------------
+
+## 1. Función para calcular el índice de masa corporal (IMC)
+
+El índice de masa corporal (IMC) es una medida utilizada para evaluar el estado nutricional de una persona, considerando su peso y altura.
+
+**Fórmula:**
+
+IMC = Peso (kg) / (Altura (m))\^2
+
+**Valores normales:** - IMC \< 18.5: Bajo peso - IMC 18.5 - 24.9: Peso normal - IMC 25 - 29.9: Sobrepeso - IMC ≥ 30: Obesidad
+
+```{r}
+calcular_imc <- function(peso, altura) {
+  imc <- peso / (altura^2)
+  return(imc)
+}
+
+# Ejemplo de uso
+calcular_imc(70, 1.75)  # Calcula el IMC para una persona de 70 kg y 1.75 m
+```
+
+------------------------------------------------------------------------
+
+## 2. Función para calcular la frecuencia cardiaca máxima (FCM)
+
+La frecuencia cardiaca máxima (FCM) es el número máximo de latidos del corazón por minuto que una persona puede alcanzar de forma segura durante el ejercicio.
+
+**Fórmula:**
+
+FCM = 220 - Edad
+
+**Valores normales:** - FCM varía según la edad de la persona.
+
+```{r}
+calcular_fcm <- function(edad) {
+  fcm <- 220 - edad
+  return(fcm)
+}
+
+# Ejemplo de uso
+calcular_fcm(30)  # Calcula la FCM para una persona de 30 años
+```
+
+------------------------------------------------------------------------
+
+## 3. Función para calcular la tasa de filtración glomerular (TFG)
+
+La tasa de filtración glomerular (TFG) es un indicador clave de la función renal. Es utilizado para evaluar la eficacia de los riñones en la filtración de desechos de la sangre.
+
+**Fórmula:**
+
+TFG = ((140 - Edad) \* Peso) / (72 \* Creatinina en suero)
+
+**Valores normales:** - TFG normal: \> 90 ml/min/1.73m² - TFG reducido: \< 60 ml/min/1.73m²
+
+```{r}
+calcular_tfg <- function(edad, peso, creatinina) {
+  tfg <- ((140 - edad) * peso) / (72 * creatinina)
+  return(tfg)
+}
+
+# Ejemplo de uso
+calcular_tfg(30, 70, 1.0)  # Devuelve la TFG en ml/min/1.73m²
+```
+
+------------------------------------------------------------------------
+
+## 4. Función para calcular la presión arterial sistólica y diastólica
+
+La presión arterial es un indicador vital que mide la fuerza que ejerce la sangre sobre las paredes de las arterias. El cálculo adecuado ayuda a detectar hipertensión.
+
+**Fórmula:**
+
+Presión Arterial = Sistólica / Diastólica
+
+**Valores normales:** - Sistólica \< 120 mmHg - Diastólica \< 80 mmHg
+
+```{r}
+calcular_presion_arterial <- function(sistolica, diastolica) {
+  presion <- paste(sistolica, "/", diastolica)
+  return(presion)
+}
+
+# Ejemplo de uso
+calcular_presion_arterial(120, 80)  # Devuelve la presión arterial "120/80"
+```
+
+------------------------------------------------------------------------
+
+## Activación de Paquetes y Carpetas Relevantes
+
+### Descarga y Activación de 3 Paquetes Adicionales
+
+Para poder realizar los cálculos mencionados anteriormente, es necesario instalar y activar algunos paquetes específicos en RStudio. Para esto, ejecutamos las siguientes líneas de código:
+
+```{r}
+install.packages("dplyr")  # Paquete para manipulación de datos
+install.packages("ggplot2")  # Paquete para creación de gráficos
+install.packages("tidyr")  # Paquete para manipulación de datos en formato largo
+```
+
+Una vez instalados, debemos cargarlos utilizando `library()` para que estén disponibles en el entorno de trabajo:
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(tidyr)
+```
+
+### Paquete 1: dplyr
+
+Este paquete facilita la manipulación de datos mediante funciones sencillas para seleccionar, filtrar, y resumir datos. Es fundamental para realizar análisis estadísticos en RStudio.
+
+### Paquete 2: ggplot2
+
+Este paquete es utilizado para crear gráficos de alta calidad en RStudio. Permite crear gráficos estáticos como histogramas, diagramas de dispersión, y gráficos de líneas.
+
+### Paquete 3: tidyr
+
+Este paquete se enfoca en la manipulación y organización de datos en formatos largos y anchos. Es esencial para transformar datos de manera eficiente.
+
+------------------------------------------------------------------------
+
+## Carpetas Relevantes Usadas en el Archivo
+
+-   **Carpeta `R/`**: Contiene los scripts de funciones personalizadas que realizan cálculos médicos y análisis estadísticos.
+-   **Carpeta `data/`**: Incluye los conjuntos de datos de ejemplo utilizados en las funciones médicas.
+-   **Carpeta `output/`**: Carpeta para guardar los resultados de los cálculos, gráficos generados y reportes finales.
+-   **Carpeta `docs/`**: Contiene documentación relevante para los paquetes y funciones utilizadas.

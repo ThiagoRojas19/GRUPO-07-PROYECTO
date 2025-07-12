@@ -1,0 +1,86 @@
+---
+title: "PRUEBAS DE AJUSTE_PRACTICA 2_2"
+author: "GRUPO 07"
+format: html
+editor: visual
+---
+
+## INTEGRANTES: GRUPO 07
+
+-   Bernachea Hilario Pilar
+
+-   Susan Angelica Rivera Allcca 
+
+-   Sebastian Joaquin Quiroz Robles
+
+-   Thiago Aldhair Peter Infante Rojas
+
+-   Eloisa Milagros Rojas Quispe
+
+## CARGAR PAQUETES:
+
+```{r}
+library(rio)
+library(here)
+library(readr)
+```
+
+## CARGAR DATOS:
+
+```{r}
+Covid19_diabetes <- read_csv("C:/Users/USER/Desktop/PRACTICA_CALIFICADA01/PRACTICA_CALIFICADA01/Data/covid_19_diabetes.csv", na = c("", "NA", "N/A"))
+```
+
+## PARA DATOS CONTINUOS:
+
+```{r}
+shapiro.test(Covid19_diabetes$Temperatura)
+```
+
+## PARA VARIABLE "SATURACIÓN_O2"
+
+```{r}
+shapiro.test(Covid19_diabetes$Saturación_O2)
+```
+
+**INTERPRETACION**
+
+Las **hipótesis** de la **prueba de Shapiro-Wilk** son:
+
+-   La **hipótesis nula** (H₀) establece que la **muestra proviene de una distribución normal**
+
+-   La **hipótesis alternativa** (H₁) plantea que la **muestra no proviene de una distribución normal**.
+
+-   Si tomamos en cuenta que el valor de p aceptado para esta evaluación es \< 0.05, entonces el resultado de la evaluación de normalidad para la variable Temperatura (*p* = 7.078e-13) indica que esta variable no tiene una distribución normal.
+
+-   De igual forma, la variable Saturación_O2 (*p* \< 2.2e-16) tampoco cumple con el supuesto de normalidad, ya que su valor de *p* es muy inferior a 0.05, lo que también lleva a rechazar la hipótesis nula.
+
+-   En ambos casos, los valores de **p** fueron menores a 0.05 (Temperatura: p = 7.078e-13; Saturación_O2: p \< 2.2e-16), lo cual indica que se rechaza la hipótesis nula de normalidad. Por lo tanto, se concluye que ninguna de las dos variables sigue una distribución normal. Esto implica que, para análisis estadísticos posteriores que involucren estas variables, **deben considerarse pruebas no paramétricas**, ya que los supuestos de normalidad no se cumplen.
+
+## PARA DATOS CATEGORICOS
+
+El dataset para esta contiene información sobre pacientes con diabetes mellitus complicada. En esta muestra, el número de participantes que tienen diabetes mellitus complicada fue de 495 de un total de 686.
+
+```{r}
+table(Covid19_diabetes$diabetes_mell_complicada)
+```
+
+Un estudio previo realizado en Perú reportó una prevalencia combinada de DM en pacientes peruanos con ERC. Se aplicó una prueba de bondad de ajuste de Chi-cuadrado para comparar la proporción observada de diabetes mellitus (DM) en nuestra muestra con la proporción esperada del 33%, reportada previamente en una población peruana con enfermedad renal crónica. (DOI: [10.1186/s12882-024-03595-x](https://doi.org/10.1186/s12882-024-03595-x))
+
+En este caso, la prevalencia del estudio previo representa el valor esperado, mientras que la prevalencia observada en nuestro conjunto de datos representa el valor observado.
+
+Uno de los objetivos de nuestro análisis es evaluar si la proporción observada de diabetes mellitus difiere significativamente de la proporción esperada. Para ello, utilizamos la prueba de bondad de ajuste de Chi-cuadrado.
+
+Las hipótesis de esta prueba son las siguientes:
+
+-   **Hipótesis nula (H₀):** No existe una diferencia significativa entre la proporción observada y la esperada.
+
+-   **Hipótesis alternativa (H₁):** Existe una diferencia significativa entre la proporción observada y la esperada.
+
+```{r}
+chisq.test(x = c(495, 191), p = c(0.33, 0.67))
+```
+
+El resultado de la prueba fue estadísticamente significativo, lo cual indica que existe una diferencia significativa entre la proporción observada y la proporción esperada.
+
+En conclusión, **la prevalencia de diabetes mellitus en nuestra población difiere significativamente de la reportada previamente**, lo cual podría deberse a diferencias poblacionales, metodológicas o clínicas que deben ser exploradas.

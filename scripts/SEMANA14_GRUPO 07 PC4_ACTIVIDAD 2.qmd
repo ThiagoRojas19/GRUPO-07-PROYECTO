@@ -1,0 +1,356 @@
+---
+title: "PC4_ACTIVIDAD 2_SEMANA 14"
+author: "GRUPO 07"
+format: html
+editor: visual
+---
+
+## PC 4 - ACTIVIDAD 2 SEMANA 14
+
+# GRUPO 07 - INTEGRANTES
+
+-   Thiago Aldhair Peter Infante Rojas
+
+-   Susan Angelica Rivera Allcca
+
+-   Quiroz Robles Sebastian Joaquin
+
+-   Rojas Quispe Eloisa Milagros
+
+-   Pilar del Carmen Barnachea Hilario
+
+# Imputación de datos usando el paquete MICE
+
+## Instalar y cargar los paquetesS
+
+```{r}
+install.packages("mice")
+install.packages("ggmice")
+```
+
+```{r}
+library(mice)
+library(tidyverse)
+library(here)
+library(rio)
+library(ggmice)
+library(gtsummary)
+```
+
+## 1. Datos perdidos en investigación en salud
+
+En investigaciones en salud es común encontrar datos faltantes, ya sea por omisiones en historias clínicas o por respuestas incompletas en encuestas. Ante esto, una práctica común es eliminar las observaciones con datos incompletos, lo que se conoce como análisis de casos completos, técnica aplicada por defecto en muchos programas estadísticos.
+
+## 2. Imputación de datos
+
+La imputación de datos permite aprovechar todas las observaciones en un análisis, mejorando la precisión de los resultados. Consiste en reemplazar los valores perdidos por estimaciones. Aunque antes se usaban métodos simples como el promedio, actualmente se prefiere la imputación múltiple, una técnica más moderna y precisa.
+
+## 3. dataset para este ejercicio
+
+Para ilustrar el proceso de imputación múltiple de datos, utilizaremos el conjunto de datos `data_sm`, .
+
+Cargando los datos:
+
+```{r}
+data_sm <- import(here("data", "covid_19_diabetes.csv"))
+```
+
+Un vistazo a los datos
+
+```{r}
+head(data_sm)
+```
+
+## 4. Realizando la imputación de datos
+
+### 4.1 ¿Donde estan los valores perdidos?
+
+Es importante saber en qué variables se encuentran los datos antes de iniciar la inputación. Una forma rápida es usando la función `colSums()` es `is.na()`.
+
+```{r}
+colSums(is.na(data_sm))
+```
+
+Incluso mejor,
+
+```{r}
+data_sm |>
+  select(
+    Derivation.cohort,
+    pac_fue_hospital,
+    duraci_hospita_diaz,
+    desenla_fallecido,
+    edad,
+    severidad,
+    raza_negra,
+    raza_blanca,
+    asiatico,
+    latino,
+    infacto_mioc,
+    enfer_vascu_periferica,
+    falla_card_conges,
+    enfer_cardiovascular,
+    demencia,
+    enf_pulmonar_obstruc_cronica,
+    diabetes_mell_complicada,
+    diabetes_mell_simple,
+    enfer_renal,
+    All.CNS,
+    Pure.CNS,
+    Accidente_cerebrovascular,
+    Convulsión,
+    Síncope_previo,
+    Otra_afección_neurológica_previa,
+    Otra_lesión_cerebral,
+    Edad,
+    Puntuación_edad,
+    Saturación_O2_medida,
+    Saturación_O2,
+    Saturación_O2_menor_94,
+    Temperatura_medida,
+    Temperatura,
+    Temperatura_mayor_38,
+    Presión_arterial_media_medida,
+    Presión_arterial_media,
+  ) |>
+  ggmice::plot_pattern(square = TRUE, rotate = TRUE)
+```
+
+### S4.2 Comparación de participantes con y sin valores perdidos
+
+Antes de imputar datos, es útil comparar las otras variables entre quienes tienen datos perdidos y quienes no. Si no hay diferencias en la distribución, es probable que los datos faltantes sean aleatorios y se pueda usar análisis de casos completos sin riesgo. Si hay diferencias, la imputación es necesaria para evitar sesgos.
+
+```{r}
+# Tabla 1: según valores perdidos en Presión arterial media
+tabla_presion <- data_sm |>
+  select(
+    edad,
+    severidad,
+    desenla_fallecido,
+    infacto_mioc,
+    enfer_renal,
+    Presión_arterial_media
+  ) |>
+  mutate(missing = factor(
+    is.na(Presión_arterial_media),
+    levels = c(FALSE, TRUE),
+    labels = c("Sin valores perdidos", "Con valores perdidos")
+  )) |>
+  tbl_summary(
+    by = missing,
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    )
+  ) |>
+  modify_header(label = "**Variable**",
+                all_stat_cols() ~ "**{level}**<br>N = {n} ({style_percent(p, digits=1)}%)") |>
+  modify_caption("**Características según valores perdidos en Presión arterial media**") |>
+  bold_labels()
+
+# Tabla 2: según valores perdidos en Saturación de oxígeno
+tabla_saturacion <- data_sm |>
+  select(
+    edad,
+    severidad,
+    desenla_fallecido,
+    infacto_mioc,
+    enfer_renal,
+    Saturación_O2
+  ) |>
+  mutate(missing = factor(
+    is.na(Saturación_O2),
+    levels = c(FALSE, TRUE),
+    labels = c("Sin valores perdidos", "Con valores perdidos")
+  )) |>
+  tbl_summary(
+    by = missing,
+    statistic = list(
+      all_continuous() ~ "{mean} ({sd})",
+      all_categorical() ~ "{n} ({p}%)"
+    )
+  ) |>
+  modify_header(
+    label = "**Variable**",
+    all_stat_cols() ~ "**{level}**<br>N = {n} ({style_percent(p, digits=1)}%)"
+  ) |>
+  modify_caption("**Características según valores perdidos en Saturación O₂**") |>
+  bold_labels()
+
+# Combinar ambas tablas
+tabla <- tbl_merge(
+  tbls = list(tabla_presion, tabla_saturacion),
+  tab_spanner = c("**Presión arterial media**", "**Saturación de oxígeno**")
+)
+```
+
+```{r}
+tabla
+```
+
+En esta tabla se observa que no hay valores perdidos en ninguna de las dos variables principales analizadas (Presión arterial media y Saturación de oxígeno), ya que todos los pacientes (N=686) están en el grupo de "Sin valores perdidos" y el grupo "Con valores perdidos" tiene N=0.
+
+Por lo tanto, dado que no hay participantes con datos perdidos en "Presión arterial media" ni en "Saturación de oxígeno", el análisis puede continuar directamente usando los 686 casos completos, sin necesidad de imputación ni preocupación por sesgo de datos faltantes.
+
+### 4.3 ¿Qué variables debo incluir en el proceso de imputación?
+
+```{r}
+str(data_sm)
+```
+
+```{r}
+input_data <- data_sm |>
+  mutate(across(where(is.character), as.factor))
+```
+
+### 4.4 La función `mice()` para imputar datos
+
+Para imputar datos utilizaremos la función `mice()` del paquete del mismo nombre. Entre sus argumentos, debemos especificar:
+
+-   el número de imputaciones con `m`,
+-   una semilla (`seed`) para que los resultados sean reproducibles, y
+-   el método de imputación con `method`.
+
+Con respecto a este último argumento,
+
+```{r}
+names(input_data)
+```
+
+El método de imputación la indicaremos con el argumento `method` en el mismo orden que aparecen las variables en el dataset.
+
+```{r}
+# Crear vector de métodos con el nombre de cada columna
+method_vector <- make.method(input_data)
+
+# Asignar método de imputación solo a las variables con NA que quieres imputar
+
+# Variables continuas imputadas con pmm (predictive mean matching)
+method_vector["duraci_hospita_diaz"] <- "pmm"
+method_vector["severidad"] <- "pmm"
+method_vector["Saturación_O2"] <- "pmm"
+method_vector["Temperatura"] <- "pmm"
+method_vector["Presión_arterial_media"] <- "pmm"
+method_vector["Plaquetas"] <- "pmm"
+method_vector["INR"] <- "pmm"
+method_vector["Glucosa"] <- "pmm"
+
+# Variables categóricas binarias imputadas con logreg (regresión logística)
+method_vector["desenla_fallecido"] <- "logreg"
+method_vector["infacto_mioc"] <- "logreg"
+method_vector["enfer_renal"] <- "logreg"
+
+# El resto se deja sin imputar
+# method_vector["otra_variable"] <- ""  # si deseas excluir alguna más explícitamente
+
+# Ejecutar imputación con mice
+data_imputada <- mice(
+  input_data,
+  m = 20,
+  method = method_vector,
+  maxit = 20,
+  seed = 3,
+  printFlag = FALSE
+)
+
+```
+
+```{r}
+data_imputada
+```
+
+El resultado de la imputación se ha guardado en el objeto data_imputada y muestra que es un objeto de clase mids (multiply imputed dataset), el número de imputaciones (20), el método de imputación para todas las variables, y en una matriz, cuales variables han sido usadas para predecir otras.
+
+## 5 Analizando los datos imputados
+
+Antes de realizar análisis adicionales al dataset imputado, es necesario explorar los datos imputados. Idealmente, los valores imputados deben ser plausibles en comparación con los valores observados. Podemos observar esto en un gráfico de cajas y bigotes de la distribución de los datos imputados (20) versus los datos sin imputar.
+
+para la variable presion arterial media
+
+```{r}
+ggmice(data_imputada, aes(x = .imp, y = Presión_arterial_media)) +
+  geom_jitter(height = 0, width = 0.25) +
+  geom_boxplot(width = 0.5, size = 1, alpha = 0.55, outlier.shape = NA) +
+  labs(x = "Imputation number")
+```
+
+Spara variable plaquetas
+
+```{r}
+ggmice(data_imputada, aes(x = .imp, y = Plaquetas)) +
+  geom_jitter(height = 0, width = 0.25) +
+  geom_boxplot(width = 0.5, size = 1, alpha = 0.55, outlier.shape = NA) +
+  labs(x = "Imputation number")
+```
+
+Ambos gráficos muestran que los valores imputados son coherentes con los observados, manteniendo la distribución original. La imputación parece adecuada, aunque los valores extremos cercanos a cero deben revisarse.
+
+```{r}
+data_imputada_l <- complete(data_imputada, "long", include = TRUE)
+```
+
+Ahora la tabla
+
+```{r}
+data_imputada_l <- data_imputada_l %>% 
+  mutate(imputed = .imp > 0,
+         imputed = factor(imputed,
+                          levels = c(F,T),
+                          labels = c("Observado", "Imputado")))
+
+prop.table(table(data_imputada_l$desenla_fallecido,
+                 data_imputada_l$imputed),
+           margin = 2)
+```
+
+Idealmente los dos primero número luego del decimal, debe ser similares entre datos observados e imputados.
+
+### 5.1 Procedimientos adicionales luego de la imputación
+
+El procedimiento estándar para realizar un análisis de regresión después de la imputación consiste en utilizar la función `with()` para ajustar el modelo de regresión al objeto `mids` (por ejemplo, `data_imputada`). Posteriormente, se emplea la función `pool()` para obtener los resultados combinados, como se suele presentar en la sección de resultados.
+
+No obstante, si se hace uso del paquete **gtsummary**, este y sus funciones manejan internamente el agrupamiento de las imputaciones, por lo que solo es necesario utilizar la función `with()`. A continuación, se muestra un ejemplo de regresión logística multivariada con los datos imputados, tal como lo realizaste anteriormente.
+
+```{r}
+tabla_multi <-
+  data_imputada |> 
+  with(glm(desenla_fallecido ~ edad + severidad + infacto_mioc +
+        enfer_renal + diabetes_mell_complicada + 
+        Saturación_O2 + Temperatura + Presión_arterial_media +
+        Dímero_D + Plaquetas + INR + Nitrógeno_ureico_sangre +
+        Creatinina + Glucosa + AST + ALT + Glóbulos_blancos +
+        Linfocitos + IL6 + Ferritina + Proteína_C_reactiva +
+        Procalcitonina + Troponina,
+      family = binomial(link = "logit"))) |> 
+  tbl_regression(exponentiate = TRUE,
+                 label = list(
+                   edad ~ "Edad",
+    severidad ~ "Severidad",
+    infacto_mioc ~ "Infarto de miocardio",
+    enfer_renal ~ "Enfermedad renal",
+    diabetes_mell_complicada ~ "Diabetes complicada",
+    Saturación_O2 ~ "Saturación de O₂",
+    Temperatura ~ "Temperatura",
+    Presión_arterial_media ~ "Presión arterial media",
+    Dímero_D ~ "Dímero D",
+    Plaquetas ~ "Plaquetas",
+    INR ~ "INR",
+    Nitrógeno_ureico_sangre ~ "NUS",
+    Creatinina ~ "Creatinina",
+    Glucosa ~ "Glucosa",
+    AST ~ "AST",
+    ALT ~ "ALT",
+    Glóbulos_blancos ~ "Leucocitos",
+    Linfocitos ~ "Linfocitos",
+    IL6 ~ "IL-6",
+    Ferritina ~ "Ferritina",
+    Proteína_C_reactiva ~ "PCR",
+    Procalcitonina ~ "Procalcitonina",
+    Troponina ~ "Troponina")) |>
+  bold_p(t = 0.05) |>
+  modify_header(estimate = "**OR ajustado**", p.value = "**p valor** ")
+```
+
+```{r}
+tabla_multi
+```

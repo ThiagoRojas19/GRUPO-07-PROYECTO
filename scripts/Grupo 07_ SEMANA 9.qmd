@@ -1,0 +1,307 @@
+---
+title: "PC2_ACTIVIDAD 3 SEMANA 9"
+author: "GRUPO 07"
+format: html
+editor: visual
+---
+
+# PC 2 - ACTIVIDAD 3
+
+# GRUPO 07 - INTEGRANTES
+
+-   Thiago Aldhair Peter Infante Rojas
+
+-   Susan Angelica Rivera Allcca
+
+-   Quiroz Robles Sebastian Joaquin
+
+-   Rojas Quispe Eloisa Milagros
+
+-   Pilar del Carmen Barnachea Hilario
+
+# Cargar e instalar paquetes
+
+```{r}
+install.packages("car") # Para la prueba de Levene
+```
+
+```{r}
+library(tidyverse)
+library(here)
+library(rio)
+library(gtsummary)
+library(car)
+```
+
+## Cargando los datos
+
+```{r}
+diabetes <- import(here("data", "diabetes.csv"))
+```
+
+```{r}
+diabetes <- diabetes %>% drop_na()
+```
+
+# Sobre los datos para esta práctica
+
+El dataset diabetes, de 392 personas adultas (\>=20 años de edad), contiene datos como; numero de embarazos, glucosa, indice de masa corporal, presion sanguinea, entre otros.
+
+# 1 Regresión lineal simple
+
+Regresión es una método para evaluar la asociación entre una variable dependiente (tambien llamado desenlace Y) y una o varias variables independientes (predictoras X1, X2,..., Xk). Los modelos de regresión lineal simple (o univariable) utilizan solo solo una variable independiente o predictora X. Ejemplos de preguntas de investigación se puede responder usando un modelo de regresión lineal:
+
+-   ¿Existe una asosación entre el nivel de glucosa medida a las 2 horas despues de una carga de glucosa (prueba de tolerancia a la glucosa oral) y la edad?
+
+## 1.1 El problema en este ejercicio
+
+El desenlace *Y* de interés para este ejercicio es la variable glucosa medida a las 2 horas despues de una carga de glucosa (prueba de tolerancia a la glucosa oral). Veamos la distribución de la variable y el promedio en en un histograma.
+
+```{r}
+diabetes |>  
+  ggplot(aes(x = glucosa_2h)) +
+  geom_histogram(
+    color = "white",
+    ) + 
+  labs(y = "Frecuencia", 
+       x = "glucosa medida a las 2 horas") +
+  geom_vline(xintercept = mean(diabetes$glucosa_2h, na.rm = TRUE),
+             color = "darkred", size = 1.5)
+```
+
+En estos datos, el promedio del nivel de glucosa medida a las 2 horas despues de una carga de glucosa (prueba de tolerancia a la glucosa oral) es:
+
+```{r}
+mean(diabetes$glucosa_2h, na.rm = TRUE)
+```
+
+## 1.2 Notación en el método de regresión lineal simple
+
+El método de regresión lineal simple encuentra la línea que mejor se ajusta a la descripción lineal entre el nivel de glucosa medida a las 2 horas despues de una carga de glucosa (prueba de tolerancia a la glucosa oral) y la edad, tal como se muestra en la siguiente figura:
+
+```{r}
+plot(glucosa_2h ~ edad, data = diabetes,
+     col = "gray",
+     ylab = "glucosa a las 2 horas",
+     xlab = "edad",
+     las = 1,
+     pch = 20, 
+     font.lab = 2, font.axis = 2)
+
+# Ajustar modelo lineal con glucosa_2h como respuesta y edad como predictor
+modelo <- lm(glucosa_2h ~ edad, data = diabetes)
+
+# Agregar línea de regresión
+abline(modelo, lwd = 2, col = "darkred")
+```
+
+## 1.3 Ajustando el modelo de regresión lineal simple para nuestro problema
+
+```{r}
+modelo_ejemplo = lm(glucosa_2h ~ edad, data = diabetes)
+```
+
+Para ver los resultados, usamos la función summary() y dentro, el objeto modelo_ejemplo.
+
+```{r}
+summary(modelo_ejemplo)
+```
+
+## 1.4 Interpretando los resultados
+
+La sección Coefficients del resultado:
+
+```{r}
+summary(modelo_ejemplo)$coef
+```
+
+## 1.5 ¿Cómo reportar los resultados del ajuste del modelo de regresión lineal simple?
+
+```{r}
+theme_gtsummary_language("es")
+
+tabla_reporte <- modelo_ejemplo |> 
+  tbl_regression(intercept = T,
+                 estimate_fun = function(x) style_sigfig(x, digits = 4),
+                 pvalue_fun   = function(x) style_pvalue(x, digits = 3),
+                 label        = list(edad ~ "edad")) |>
+  modify_caption("Regresión del nivel de glucosa a las 2 horas (mg/dL) en función de la edad")
+
+tabla_reporte
+```
+
+EXPORTAMOS TABLA
+
+```{r}
+tabla_reporte |> 
+  as_flex_table()  |> 
+  flextable::save_as_docx(path = "tabla_reporte.docx")
+```
+
+# 2 Prueba t de Student para muestras independientes
+
+```{r}
+group_by(diabetes, diabetes_5a) |> 
+  summarise(
+    count = n(),
+    mean = mean(imc, na.rm = TRUE),
+    sd = sd(imc, na.rm = TRUE)
+  )
+```
+
+VISUALIZACION
+
+```{r}
+diabetes |>  
+  filter(!is.na(diabetes_5a)& !is.na(imc))  |> 
+  ggplot(aes(y = imc, x = diabetes_5a)) +
+  geom_boxplot() +
+  labs(y = "diabetes en 5 años", x = "indice de masa corporal")
+```
+
+## 2.4 Pruebas preliminares para evaluar los supuestos de la prueba t de Student
+
+Supuesto 1: los datos deben haber sido muestreados de una distribución normal.
+
+Para esto, usamos la prueba de Shapiro-wilk.
+
+```{r}
+diabetes |> 
+  filter(diabetes_5a == "positivo") |> 
+  summarise(shapiro = list(shapiro.test(imc))) |> 
+  pull(shapiro)
+```
+
+```{r}
+diabetes |> 
+  filter(diabetes_5a == "negativo") |> 
+  summarise(shapiro = list(shapiro.test(imc))) |> 
+  pull(shapiro)
+```
+
+Supuesto 2: Las varianzas de los dos grupos son iguales Para esto podemos usar la prueba F para evaluar la homogeneidad de varianzas. Esto esta implementado en la función var.test()
+
+```{r}
+var.test(imc ~ diabetes_5a, data = diabetes)
+```
+
+## 2.5 Realizamos la prueba t para nuestros datos.
+
+```{r}
+t.test(imc ~ diabetes_5a, data = diabetes, var.equal = TRUE)
+```
+
+# 3 Análisis de Varianza (ANOVA)
+
+El análisis de varianza (ANOVA), especificamente el ANOVA de una vía, es una extensión de la prueba t para muestras independientes cuando se comparan medias entre más de dos grupos. En el ANOVA de una vía, los datos se organizan en varios grupos basados en una única variable de agrupación (también llamada variable de factor).
+
+En este ejercicio, evaluamos si los niveles de glucosa a las 2 horas (mg/dL) difieren significativamente según el estado de diabetes (positivo o negativo).
+
+## 3.1 ¿Cuándo usar el ANOVA de una vía?
+
+-   Las observaciones se obtienen de forma independiente y aleatoria de la población definida por los niveles del factor.
+
+-   Los datos de cada nivel del factor se distribuyen normalmente.
+
+-   Hipótesis nula (H₀): No hay diferencia entre las medias de los dos grupos.
+
+-   Estas poblaciones normales tienen una varianza común. (Se puede usar la prueba de Levene para verificar esto.)
+
+## 3.2 Sobre los datos para esta práctica
+
+El dataset diabetes, de 392 personas adultas (\>=20 años de edad), contiene datos como; numero de embarazos, glucosa, indice de masa corporal, presion sanguinea, entre otros.
+
+## 3.3 Resumen y visualización
+
+RESUMEN
+
+Antes de realizar la prueba de ANOVA es importante conocer la distribución de los datos e identificar si hay atípicos. Empecemos por el resumen:
+
+```{r}
+diabetes %>%
+  group_by(diabetes_5a) %>%
+  summarise(
+    count = n(),
+    mean = mean(glucosa_2h, na.rm = TRUE),
+    sd = sd(glucosa_2h, na.rm = TRUE),
+    min = min(glucosa_2h, na.rm = TRUE),
+    max = max(glucosa_2h, na.rm = TRUE)
+  )
+```
+
+INTERPRETACION:
+
+-   En el grupo negativo (sin diabetes), con 262 personas, el promedio de glucosa es 111.43 mg/dL con una desviación estándar de 24.64 mg/dL. Los valores de glucosa varían entre 56 y 197 mg/dL.
+
+-   En el grupo positivo (con diabetes), con 130 personas, el promedio de glucosa es más alto, 145.19 mg/dL, con una desviación estándar de 29.84 mg/dL. Los valores oscilan entre 78 y 198 mg/dL.
+
+Visualización
+
+```{r}
+diabetes |>  
+  filter(!is.na(diabetes_5a)& !is.na(glucosa_2h))  |> 
+  ggplot(aes(y = glucosa_2h, x = diabetes_5a)) +
+  geom_boxplot() +
+  labs(y = "prueba de toleracia oral a la glucosa", x = "diabetes en 5 años")
+```
+
+INTERPRETACION: El grupo con diabetes presenta niveles de glucosa más altos y una mayor variabilidad en comparación con el grupo sin diabetes, que muestra valores más bajos y menos dispersos.
+
+## 3.4 Pruebas preliminares para evaluar los supuestos del ANOVA
+
+```{r}
+diabetes <- diabetes |>
+    mutate(diabetes_5a = as.factor(diabetes_5a))
+```
+
+Supuesto 1: los datos deben haber sido muestreados de una distribución normal.
+
+Para esto, usamos la prueba de Shapiro-wilk.
+
+```{r}
+diabetes |> 
+  filter(diabetes_5a == "positivo") |> 
+  summarise(shapiro = list(shapiro.test(glucosa_2h))) |> 
+  pull(shapiro)
+```
+
+INTERPRETACION: El valor p obtenido en la prueba de normalidad fue menor que 0.05, lo que indica que los datos no cumplen con la suposición de normalidad.
+
+```{r}
+diabetes |> 
+  filter(diabetes_5a == "negativo") |> 
+  summarise(shapiro = list(shapiro.test(glucosa_2h))) |> 
+  pull(shapiro)
+```
+
+INTERPRETACION: El valor p obtenido en la prueba de normalidad fue menor que 0.05, lo que indica que los datos no cumplen con la suposición de normalidad.
+
+**Supuesto 2:** Las varianzas de los dos grupos no son iguales, pero podriamos tratar de usar la prueba de Levene para evaluar la homogeneidad de varianzas. Esto esta implementado en la función var.test()
+
+```{r}
+leveneTest(glucosa_2h ~ diabetes_5a, data = diabetes)
+```
+
+El valor p de la prueba de Levene es p = 0.0007, que es menor que el nivel de significancia α = 0.05. Por lo tanto, hay una diferencia significativa entre las varianzas de los dos grupos (personas con y sin diabetes).
+
+## 3.5 Realizamos la prueba de ANOVA de una vía para nuestros datos.
+
+```{r}
+res_anova = aov(glucosa_2h ~ diabetes_5a, data = diabetes)
+```
+
+```{r}
+summary(res_anova)
+```
+
+**Interpretando los resultados**
+
+Dado que el valor p es menor que el nivel de significancia de 0.05, concluimos que existen diferencias estadísticamente significativas en los niveles de glucosa a las 2 horas entre los grupos con y sin diabetes.
+
+Entonces para este ejecicio SI hemos encontrado una diferencia estadísticamente significativa, en este caso, es importante realizar una prueba de comparación por pares para saber dónde se encuentra la diferencia. Para esto, se puede utilizar la prueba Tukey HSD (Tukey Honest Significant Differences)
+
+```{r}
+TukeyHSD(res_anova)
+```
+
+El test de comparaciones múltiples de Tukey mostró que los niveles de glucosa a las 2 horas son significativamente mayores en personas con diabetes positiva en comparación con aquellas con diagnóstico negativo, con una diferencia media de 33.76 mg/dL.

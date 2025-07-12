@@ -1,0 +1,61 @@
+---
+title: "Estudio_Cohorte_SEMANA_06"
+author: "GRUPO 07"
+format: html
+editor: visual
+---
+
+## INTEGRANTES:
+
+-   INFANTE ROJAS, THIAGO ALDHAIR PETER
+
+-   RIVERA ALLCCA, SUSAN ANGELICA
+
+-   BERNACHEA HILARIO, PILAR DEL CARMEN
+
+-   QUIROZ ROBLES, SEBASTIAN JOAQUIN
+
+-   ROJAS QUISPE, ELOISA MILAGROS
+
+# Instalar y Cargar paquetes
+
+```{r}
+install.packages("epiR")
+```
+
+```{r}
+library(epiR)
+```
+
+## TEMA INVESTIGACIÓN:
+
+**"Características y factores asociados a mortalidad en pacientes traqueostomizados con COVID-19: un estudio de cohorte retrospectivo en un hospital de Tacna, Perú"**
+
+## TIPO DE ESTUDIO: CÁLCULO DE MUESTRA PARA UN ESTUDIO DE "COHORTE"
+
+Se desea evaluar el efecto de tener niveles elevados de procalcitonina (\>0.5 ng/dL) sobre el riesgo de mortalidad en pacientes con COVID-19 sometidos a traqueostomía.Se analizaron pacientes hospitalizados en la Unidad de Cuidados Intensivos (UCI) del Hospital Daniel Alcides Carrión de Tacna, Perú, durante la pandemia. En total, se incluyeron 73 pacientes, de los cuales 14 presentaban procalcitonina \>0.5 ng/dL y 59 tenían niveles ≤0.5 ng/dL en el momento de la traqueostomía. Durante la estancia en UCI (seguimiento estimado promedio: 18 días), fallecieron 12 de los 14 pacientes con procalcitonina elevada (85.7%) y 15 de los 59 con procalcitonina normal (25.4%). [DOI: 10.17843/rpmesp.2023.404.12629](https://doi.org/10.17843/rpmesp.2023.404.12629)
+
+¿Cuál sería el tamaño de muestra necesario para detectar una diferencia significativa en mortalidad según los niveles de procalcitonina, con un poder del 80% y un nivel de confianza del 95%?
+
+```{r}
+epi.sscohortt(
+  irexp1 = 12/14,     # Proporción de muertes con procalcitonina elevada
+  irexp0 = 15/59,     # Proporción de muertes con procalcitonina normal
+  FT = 0.049,          # Tiempo de seguimiento
+  n = NA,             # Calculamos el tamaño de muestra
+  power = 0.80,       # es el poder estadístico, Se quiere una potencia del 80%, es decir, una probabilidad del 80% de detectar una asociación si realmente existe
+  r = 1,              # Se quiere tener un número igual de casos y controles (relación 1:1), ósea que si es uno por cada caso tengo un solo control. en caso de ser tener dos controles, pondria r=2.
+  design = 1,
+  sided.test = 2,     # Prueba bilateral,indica que el test de hipótesis seria bilateral.
+  nfractional = FALSE, #porque estoy hablando de números enteros, si fueran numeros decimales, se pondria TRUE
+  conf.level = 0.95   # Nivel de confianza (95%)
+)
+```
+
+## CONCLUSION:
+
+Para este tipo de estudio de cohorte mediante la función `epi.sscohortt`, se determinó que para detectar con una potencia del 80% y un nivel de confianza del 95% esta diferencia significativa en mortalidad entre los grupos con procalcitonina elevada y normal, se requiera una muestra donde se necesite un total de 1980 pacientes, distribuidos equitativamente, para detectar una diferencia significativa en la mortalidad segun el nivel de procalcitonina.
+
+Este hallazgo revela una limitación crítica del estudio original: el tamaño muestral actual (n=73) no alcanza el umbral requerido para garantizar una adecuada potencia estadística. Por tanto, aunque los resultados observados son clínicamente relevantes y estadísticamente significativos en este contexto, se debe tener precaución en su generalización, ya que podrían estar sujetos a errores tipo II o amplios intervalos de confianza.
+
+Se concluye que para evaluar con precisión el efecto de niveles elevados de procalcitonina sobre la mortalidad en pacientes traqueostomizados por COVID-19, se requiere una muestra considerablemente mayor, lo que justifica la necesidad de estudios multicéntricos con mayor tamaño muestral para confirmar y fortalecer la evidencia actual

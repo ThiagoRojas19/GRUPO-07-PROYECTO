@@ -1,0 +1,296 @@
+---
+title: "PC4_ACTIVIDAD1_SEMANA13"
+author: "GRUPO 07"
+format: html
+editor: visual
+---
+
+## PC 4 - ACTIVIDAD 1 SEMANA 13
+
+# GRUPO 07 - INTEGRANTES
+
+-   Thiago Aldhair Peter Infante Rojas
+
+-   Susan Angelica Rivera Allcca
+
+-   Quiroz Robles Sebastian Joaquin
+
+-   Rojas Quispe Eloisa Milagros
+
+-   Pilar del Carmen Barnachea Hilario
+
+## Métodos de agrupamiento usando Machine Learning
+
+## Instalar y cargar los paquetes
+
+```{r}
+install.packages("factoextra")
+install.packages("cluster")
+```
+
+```{r}
+library(factoextra)
+library(cluster)
+library(here)
+library(rio)
+library(tidyverse)
+```
+
+# 1. Machine Learning
+
+## 1.1 Uso de las técnicas de agrupamiento para responden preguntas de investigación en salud
+
+¿Qué es el *agrupamiento* (clustering)?
+
+El agrupamiento es una técnica de aprendizaje no supervisado dentro del Machine Learning que agrupa automáticamente los datos en conjuntos (clusters) que son internamente similares entre sí, sin que sepamos de antemano cuáles son esas categorías. El algoritmo identifica patrones ocultos en los datos y los organiza en grupos basados en similitudes.
+
+A partir de esto, obtendremos grupos cuyos individuos que pertenecen a un mismo grupo son similares pero diferentes a individuos que pertenecen a otros grupos.
+
+# 2 Análisis de agrupamiento herarquico (Hierarchical Clustering)
+
+¿Qué es el clustering jerárquico?
+
+Es una técnica de **agrupamiento no supervisado** que **no requiere definir el número de grupos previamente**
+
+## 2.1 Sobre el problema para esta sesión
+
+Nuestra dataset contiene información clínica y de laboratorio de 686 pacientes diagnosticados con COVID-19, con especial interés en la evaluación de comorbilidades como la diabetes mellitus y su relación con la evolución clínica El dataset incluye 25 variables numéricas, que incluyen datos de laboratorio y signos vitales relevantes para el manejo clínico, tales como: edad, Saturacion de oxigeno, Temperatura corporal, dimero D, Sodio, AST y ALT, entre otros.
+
+El objetivo de este ejercicio es aplicar el método de agrupamiento jerárquico para identificar grupos de pacientes que compartan características similares en cuanto a su estado de salud basal, lo que permitirá proponer posibles categorías de riesgo o patrones clínicos diferenciados.
+
+## 2.2 El dataset para esta sesión
+
+Para ilustrar el proceso de análisis usaremos el dataset llamado covid_diabetes el cual contiene 686 observaciones con las siguientes variables: Paciente fue hospitalizado; Duración de hospitalización (en días); Fallecimiento del paciente; Edad (agrupada); Severidad clínica de COVID-19; Raza negra; Raza blanca; Raza asiática; Raza/etnia latina; Infarto agudo de miocardio previo; Enfermedad vascular periférica; Insuficiencia cardíaca congestiva; Enfermedad cardiovascular; Demencia; Enfermedad pulmonar obstructiva crónica (EPOC); Diabetes mellitus con complicaciones; Diabetes mellitus sin complicaciones; Enfermedad renal crónica; Algún trastorno del sistema nervioso central; Trastorno exclusivo del sistema nervioso central; Accidente cerebrovascular previo; Historia de convulsiones; Historia de síncope; Otra enfermedad neurológica previa; Otra lesión estructural cerebral previa; Edad en años; Puntuación por edad; ¿Se midió saturación de oxígeno?; Saturación de oxígeno (%); Saturación menor al 94%; ¿Se midió temperatura?; Temperatura corporal (°C); Temperatura mayor a 38°C; ¿Se midió presión arterial media?; Presión arterial media (mmHg); Presión arterial media menor de 70 mmHg; ¿Se midió dímero D?; Dímero D (ng/mL o µg/mL FEU); Dímero D mayor a 3; ¿Se midieron plaquetas?; Recuento de plaquetas (mil/mm³); Puntuación asignada al valor de plaquetas; ¿Se midió INR?; Índice internacional normalizado; INR mayor a 1.2; ¿Se midió nitrógeno ureico en sangre?; Nitrógeno ureico en sangre (mg/dL); BUN mayor de 30 mg/dL; ¿Se midió creatinina?; Creatinina sérica (mg/dL); Puntos según creatinina; ¿Se midió sodio?; Sodio sérico (mmol/L); Sodio fuera de rango normal; ¿Se midió glucosa?; Glucosa en sangre (mg/dL); Glucosa extremadamente baja o alta; ¿Se midió AST?; AST (aspartato aminotransferasa) (U/L); AST mayor a 40 U/L; ¿Se midió ALT?; ALT (alanina aminotransferasa) (U/L); ALT mayor a 40 U/L; ¿Se midieron leucocitos?; Recuento de glóbulos blancos (mil/mm³); Leucocitos fuera de rango; ¿Se midieron linfocitos?; Recuento de linfocitos (mil/mm³); Linfocitos \< 1; ¿Se midió interleucina 6?; Interleucina 6 (pg/mL); IL-6 mayor a 150; ¿Se midió ferritina?; Ferritina sérica (ng/mL); Ferritina mayor a 300; ¿Se midió proteína C reactiva?; Proteína C reactiva (mg/dL); PCR mayor a 10; ¿Se midió procalcitonina?; Procalcitonina (ng/mL); Procalcitonina mayor a 0.1; ¿Se midió troponina?; Troponina (ng/mL); Troponina mayor a 0.1
+
+```{r}
+covid_diabetes <- import(here("data", "covid_19_diabetes.csv"))
+```
+
+## 2.3 Preparación de los datos
+
+### 2.3.1 Solo datos numéricos
+
+Para el análisis de agrupamiento jerárquico de esta sesión usaremos solo variables numéricas. Es posible emplear variables categóricas en esta técnica, pero esto no será cubierto aquí. El código abajo elimina las variables categóricas
+
+```{r}
+limpiar_dataset <- function(data, columna_id = NULL) {
+  data_limpia <- data |>
+    select(where(~ !is.character(.x) & !is.factor(.x)))
+
+  # Si se especifica columna_id, convertirla en rownames
+  if (!is.null(columna_id) && columna_id %in% colnames(data_limpia)) {
+    data_limpia <- data_limpia |>
+      column_to_rownames(columna_id)
+  }
+
+  return(data_limpia)
+}
+```
+
+```{r}
+covid_diabetes_1 <- limpiar_dataset(covid_diabetes, columna_id = "id")
+```
+
+### 2.3.2 La importancia de estandarizar
+
+Estandarizar significa transformar las variables a una escala común para hacerlas comparables entre sí. Esto es especialmente importante porque uno de los pasos clave en el método de agrupamiento consiste en calcular distancias entre los objetos (en este caso, los pacientes) a partir de las variables clínicas incluidas en el dataset.
+
+Por ejemplo, la glucosa en sangre se mide en miligramos por decilitro (mg/dL) y sus valores pueden variar ampliamente, desde cifras normales cercanas a 100 hasta valores mayores a 300 en pacientes con hiperglucemia. En cambio, el INR (Índice Internacional Normalizado), que evalúa la coagulación sanguínea, suele oscilar en un rango mucho más estrecho, típicamente entre 0.9 y 3. Esta diferencia de escalas puede influir en el análisis estadístico si no se realiza una estandarización previa de las variables, ya que las de mayor magnitud numérica pueden dominar el modelo. Si no se realiza una estandarización previa, las variables con valores numéricos más grandes o con unidades distintas podrían influir desproporcionadamente en el cálculo de distancias, generando agrupamientos sesgados o poco representativos de la verdadera estructura de los datos.
+
+Para ilustrar este punto: si se agrupa a los pacientes considerando simultáneamente su nivel de glucosa en sangre (mg/dL) y su INR (índice internacional normalizado), cabe preguntarse: ¿una diferencia de 1 mg/dL en glucosa es tan relevante como una diferencia de 1 unidad en INR? ¿Qué variable debería tener mayor peso en la formación de los grupos? Dado que la glucosa puede variar ampliamente, mientras que el INR se mantiene en un rango estrecho, es necesario estandarizar ambas variables para que contribuyan equitativamente al análisis y no se vea sesgado por sus escalas numéricas distintas. Sin una estandarización previa, estas diferencias no serían comparables, y las variables con mayor rango numérico dominarían el cálculo de distancias, afectando los resultados de la clasificación. Por ello, es imprescindible aplicar una función de estandarización, como `scale()` en R, que transforma las variables para que tengan media cero y desviación estándar uno, permitiendo así que todas contribuyan equitativamente al análisis.
+
+```{r}
+covid_diabetes_escalado = scale(covid_diabetes_1)
+```
+
+Un vistazo a los datos antes del escalamiento:
+
+```{r}
+head(covid_diabetes_1)
+```
+
+y un vistazo después del escalamiento:
+
+```{r}
+head(covid_diabetes_escalado)
+```
+
+## 2.4 Cálculo de distancias
+
+Dado que uno de los pasos es encontrar "cosas similares", necesitamos definir "similar" en términos de distancia. Esta distancia la calcularemos para cada par posible de objetos (participantes) en nuestro dataset. Por ejemplo, si tuvieramos a los pacientes A, B y C, las distancia se calcularían para A vs B; A vs C; y B vs C. En R, podemos utilizar la función `dist()` para calcular la distancia entre cada par de objetos en un conjunto de datos. El resultado de este cálculo se conoce como matriz de distancias o de disimilitud.
+
+```{r}
+dist_covid_diabetes <- dist(covid_diabetes_escalado, method = "euclidean")
+```
+
+## 2.4.1 Visualizando las distancias euclidianas con un mapa de calor
+
+Una forma de visualizar si existen patrones de agrupamiento es usando mapas de calor (heatmaps). En R usamos la función `fviz_dist()` del paquete factoextra para crear un mapa de calor.
+
+```{r}
+fviz_dist(dist_covid_diabetes)
+```
+
+El nivel de color en este gráfico es proporcional al grado de disimilitud entre observaciones (pacientes). Por ejemplo, un color más claro (rosado o blanco) indica una menor distancia, es decir, mayor similitud, mientras que los colores más oscuros (azules) reflejan una mayor disimilitud. La línea diagonal corresponde a la comparación de cada observación consigo misma, por lo que sus valores son cero. Las observaciones que pertenecen a un mismo clúster (grupo) tienden a agruparse en bloques contiguos con colores similares. Por lo tanto, una conclusión del gráfico es que existen grupos de pacientes que comparten características similares, lo que se refleja en la presencia de patrones o bloques de color homogéneo.
+
+## 2.5 El método de agrupamiento: función de enlace (linkage)
+
+En el análisis de conglomerados jerárquico, el método de enlace (o linkage) es una regla que define cómo se mide la distancia entre dos grupos (clústeres) durante el proceso de agrupamiento
+
+Sin embargo, no basta con calcular las distancias entre todos los pares de objetos. Una vez que se forma un nuevo grupo (clúster), hay que decidir cómo medir la distancia entre ese grupo y los demás puntos o grupos ya existentes. Hay varias formas de hacerlo, y cada una genera un tipo diferente de agrupamiento jerárquico. La función de enlace (linkage) toma la información de distancias devuelta por la función `dist()` y agrupa pares de objetos en clústeres basándose en su similitud. Luego, estos nuevos clústeres formados se enlazan entre sí para crear clústeres más grandes. Este proceso se repite hasta que todos los objetos del conjunto de datos quedan agrupados en un único árbol jerárquico. Hay varios métodos para realizar este agrupamiento, incluyendo *Enlace máximo o completo*, *Enlace mínimo o simple*, *Enlace de la media o promedio*, *Enlace de centroide*, *Método de varianza mínima de Ward*. No entraremos en detalle sobre cómo funciona estos métodos, pero para este contexto el método de varianza minima de Ward o el método máximo, son preferidos. En este ejemplo, usamos el método de varianza mínima de Ward.
+
+```{r}
+dist_link_covid_diabetes <- hclust(d = dist_covid_diabetes, method = "ward.D2")
+```
+
+## 2.7 Dendrogramas para la visualización de patrones
+
+Los dendrogramas es una representación gráfica del árbol jerárquico generado por la función `hclust()`.
+
+```{r}
+fviz_dend(dist_link_covid_diabetes, cex = 0.7)
+```
+
+Un dendrograma es como un árbol genealógico para los clústeres (grupos). Esta muestra cómo los puntos de datos individuales o los grupos de datos se van uniendo entre sí. En la parte inferior, cada punto de datos se representa como un grupo independiente, y a medida que se asciende, los grupos similares se combinan. Cuanto más bajo es el punto de unión, mayor es la similitud entre los grupos.
+
+-   El dendrograma de nuestra data set muestra una estructura jerárquica clara entre los pacientes, con varias divisiones principales visibles. Esto sugiere la posible existencia de 3 a 5 grupos distintos.
+
+## 2.8 ¿Cúantos grupos se formaron en el dendrograma?
+
+Para nuestro dendrograma, se muestra entre tres grupos a 5 grupos. Se estuvo empezando con 4 y 5 grupos pero no estába bien visualmente. En el código de abajo, el argumento k = 3 define el número de clusters.
+
+Tres colores hacen que los bloques principales del dendrograma sean claros y legibles, sin saturarlo.
+
+```{r}
+fviz_dend(dist_link_covid_diabetes, 
+          k = 3,
+          cex = 0.5,
+          k_colors = c("#2E9FDF", "#E7B800", "#FC4E07"),
+          color_labels_by_k = TRUE, 
+          rect = TRUE)
+```
+
+# 3 Agrupamiento con el algoritmo K-Means
+
+Es un método de aprendizaje no supervisado que se utiliza para dividir un conjunto de datos en grupos (clusters) que comparten características similares.
+
+**K-means** significa:
+
+-   **K:** el número de grupos (clusters) que decides formar.
+
+-   **means:** hace referencia a que cada grupo está representado por su **centroide** (la media de los puntos del grupo).
+
+El objetivo principal es encontrar patrones o estructuras ocultas en los datos, es decir, agrupar observaciones que se parecen entre sí, sin saber de antemano a qué grupo pertenecen.
+
+Esto contrasta con la técnica anterior, dado que aquí sí iniciamos con un grupo pre-definido cuya idoniedad (de los grupos) puede ser evaluado. En detalle, el esta técnica clasifica a los objetos (participantes) del dataset en múltiples grupos, de manera que los objetos dentro de un mismo clúster sean lo más similares posible entre sí (alta similitud intragrupo), mientras que los objetos de diferentes clústeres sean lo más diferentes posible entre ellos (baja similitud intergrupo)
+
+Aquí como funciona el algoritmo de K-Means
+
+1.  Indicar cuántos grupos (clústeres) se quieren formar.
+2.  Elegir aleatoriamente K casos del conjunto de datos como centros iniciales.
+3.  Asignar cada paciente al grupo cuyo centro esté más cerca, usando la distancia euclidiana. Es como medir con una regla cuál centroide (paciente promedio) está más próximo a cada paciente en función de todas sus variables.
+4.  Calcular un nuevo centro para cada grupo. Es decir, calcular el promedio de todas las variables de los pacientes que quedaron en ese grupo.
+5.  Repetir los pasos 3 y 4 hasta que los pacientes dejen de cambiar de grupo o hasta alcanzar un número máximo de repeticiones (en R, por defecto son 10 repeticiones). Esto permitirá que los grupos finales sean estables.
+
+## 3.1 El problema y dataset para este ejercicio
+
+Usaremos el mismo dataset y el mismo problema que el que empleamos en el ejercicio anterior (para Agrupamiento Jerárquico).
+
+## 3.2 Estimando el número óptimo de clusters
+
+Como indicamos arriba, el método de agrupamiento k-means requiere que el usuario especifique el número de clústeres (grupos) a generar. Una pregunta fundamental es: ¿cómo elegir el número adecuado de clústeres esperados (k)?
+
+Aquí muestro una solución sencilla y popular: realizar el agrupamiento k-means probando diferentes valores de k (número de clústeres). Luego, se grafica la suma de cuadrados dentro de los clústeres (WSS) en función del número de clústeres. En R, podemos usar la función fviz_nbclust() para estimar el número óptimo de clústeres.
+
+Primero escalamos los datos:
+
+```{r}
+covid_diabetes_escalado = scale(covid_diabetes_1)
+```
+
+Ahora graficamos la suma de cuadrados dentro de los gráficos
+
+```{r}
+fviz_nbclust(covid_diabetes_escalado, kmeans, nstart = 25, method = "wss") + 
+  geom_vline(xintercept = 3, linetype = 2)
+```
+
+-   Eje Y: **Total Within Sum of Squares (WSS)**\
+    Es la suma de las distancias cuadradas de cada punto a su centroide dentro de cada cluster.\
+    Cuanto menor, más compactos son los clusters.
+
+-   Eje X: **Número de clusters (K)** que pruebas (1 a 10).
+
+-   El método consiste en buscar el punto donde la disminución de WSS deja de ser tan pronunciada, es decir, donde se “dobla” la curva como un codo.
+
+El punto de inflexión (“el codo”) está en K=3. Esto significa que 3 clusters es un número óptimo, porque: Captura la estructura principal de los datos, para nuestro gráfico, es en el número de cluster 3.
+
+## 3.3 Cálculo del agrupamiento k-means
+
+Dado que el resultado final del agrupamiento k-means es sensible a las asignaciones aleatorias iniciales, se especifica el argumento `nstart = 25`. Esto significa que R intentará 25 asignaciones aleatorias diferentes y seleccionará la mejor solución, es decir, aquella con la menor variación dentro de los clústeres. El valor predeterminado de `nstart` en R es 1. Sin embargo, se recomienda ampliamente utilizar un valor alto, como 25 o 50, para obtener un resultado más estable y confiable. El valor empleado aquí, fue usado para determinar el número de clústeres óptimos.
+
+```{r}
+set.seed(123)
+km_res <- kmeans(covid_diabetes_escalado, 3, nstart = 25)
+```
+
+```{r}
+km_res
+```
+
+El análisis de conglomerados mediante K-means identificó **tres clústeres** de tamaños 36, 482 y 168 pacientes, respectivamente.
+
+Los resultados incluyen:
+
+-   **Centros de clústeres**: representan los valores promedio estandarizados de cada variable dentro de cada grupo, permitiendo caracterizar el perfil clínico de cada conglomerado.
+
+-   **Vector de asignación**: indica a qué clúster pertenece cada paciente.
+
+Este agrupamiento sugiere la existencia de tres perfiles clínicos diferenciados en la cohorte analizada.
+
+## 3.4 Visualización de los clústeres k-means
+
+Al igual que el análisis anterior, los datos se pueden representar en un gráfico de dispersión, coloreando cada observación o paciente según el clúster al que pertenece. El problema es que los datos contienen más de dos variables, y surge la pregunta de qué variables elegir para representar en los ejes X e Y del gráfico. Una solución es reducir la cantidad de dimensiones aplicando un algoritmo de reducción de dimensiones, como el Análisis de Componentes Principales (PCA). El PCA transforma las 52 variables originales en dos nuevas variables (componentes principales) que pueden usarse para construir el gráfico.
+
+La función `fviz_cluster()` del paquete factoextra se puede usar para visualizar los clústeres generados por k-means. Esta función toma como argumentos los resultados del k-means y los datos originales (covid_diebates_escalado).
+
+```{r}
+fviz_cluster(
+  km_res,
+  data = covid_diabetes_escalado,
+  palette = c("#2E9FDF", "#E7B800", "#FC4E07"),
+  ellipse.type = "euclid",
+  repel = TRUE,
+  ggtheme = theme_minimal()
+)
+```
+
+### 3.4.1 INTERPRETACIÓN
+
+El **PCA** se usó para **reducir la dimensionalidad** del conjunto de datos numéricos, proyectando toda la información en dos componentes principales:
+
+-   **Dim1 (17%)**: explica el 17% de la variabilidad total.
+
+-   **Dim2 (11.4%)**: explica el 11.4%.
+
+En total, estas dos dimensiones representan **aproximadamente el 28.4% de la variabilidad** del conjunto original.
+
+#### Cluster 1 (azul):
+
+Está bien definido, compacto, ubicado a la derecha inferior. Es probable que represente pacientes con características numéricas similares y posiblemente más “normales” o “controladas”.
+
+#### Cluster 2 (amarillo):
+
+-   Es el grupo más numeroso y extendido, ocupa gran parte del gráfico.
+
+-   Representa pacientes con **gran variabilidad interna**, pero con una tendencia central.
+
+Posiblemente un grupo **heterogéneo** que comparte algunas características clave, pero sin extremos.
+
+#### Cluster 3 (rojo):
+
+-   Aparece bien separado, hacia el lado izquierdo.
+
+-   Puede representar pacientes con valores **más extremos o anómalos** en ciertas variables numéricas.
+
+Podría ser clínicamente interesante: pacientes más críticos, o con perfiles metabólicos muy distintos (hiperglucemia severa, edad avanzada, etc.)
